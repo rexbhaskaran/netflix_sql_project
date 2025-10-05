@@ -77,9 +77,13 @@ ranking = 1
 ### 3. List All Movies Released in a Specific Year (e.g., 2020)
 
 ```sql
-SELECT * 
-FROM netflix
-WHERE release_year = 2020;
+select	*
+from netflix
+WHERE 
+	type = 'Movie' 
+	AND
+	release_year = 2020
+
 ```
 
 **Objective:** Retrieve all movies released in a specific year.
@@ -171,18 +175,14 @@ return top 5 year with highest avg content release!
 
 ```sql
 SELECT 
-    country,
-    release_year,
-    COUNT(show_id) AS total_release,
-    ROUND(
-        COUNT(show_id)::numeric /
-        (SELECT COUNT(show_id) FROM netflix WHERE country = 'India')::numeric * 100, 2
-    ) AS avg_release
+	EXTRACT(YEAR FROM TO_DATE(date_added,'Month DD,YYYY'))AS Year,
+	COUNT(*) as yearly_content ,
+	ROUND(
+	count(*)::numeric/(select count (*) from netflix where country = 'India')::numeric * 100
+	,2)AS avg_content_per_year
 FROM netflix
 WHERE country = 'India'
-GROUP BY country, release_year
-ORDER BY avg_release DESC
-LIMIT 5;
+GROUP BY Year
 ```
 
 **Objective:** Calculate and rank years by the average number of content releases by India.
@@ -222,13 +222,15 @@ WHERE casts LIKE '%Salman Khan%'
 
 ```sql
 SELECT 
-    UNNEST(STRING_TO_ARRAY(casts, ',')) AS actor,
-    COUNT(*)
+unnest(STRING_TO_ARRAY(casts,',')) as actors,
+count(*) as total_contents
 FROM netflix
-WHERE country = 'India'
-GROUP BY actor
-ORDER BY COUNT(*) DESC
-LIMIT 10;
+WHERE 
+	COUNTRY ILIKE '%india%'
+group by 1
+ORDER BY 2 DESC
+LIMIT 10
+
 ```
 
 **Objective:** Identify the top 10 actors with the most appearances in Indian-produced movies.
@@ -236,18 +238,25 @@ LIMIT 10;
 ### 15. Categorize Content Based on the Presence of 'Kill' and 'Violence' Keywords
 
 ```sql
+with new_table
+AS
+(
 SELECT 
-    category,
-    COUNT(*) AS content_count
-FROM (
-    SELECT 
-        CASE 
-            WHEN description ILIKE '%kill%' OR description ILIKE '%violence%' THEN 'Bad'
-            ELSE 'Good'
-        END AS category
-    FROM netflix
-) AS categorized_content
-GROUP BY category;
+*,
+	CASE
+	WHEN 
+		description ILIKE '%kill%' OR
+		description ILIKE '%violence%' THEN 'Bad_Content'
+		ELSE 'Good_content'
+	END category
+from netflix	
+)
+select 
+	category,
+	count(*) as total_content
+from new_table
+group by 1
+ 
 ```
 **Objective:** Categorize content as 'Bad' if it contains 'kill' or 'violence' and 'Good' otherwise. Count the number of items in each category.
 
